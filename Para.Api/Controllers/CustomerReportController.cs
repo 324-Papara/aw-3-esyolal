@@ -1,6 +1,5 @@
-using Dapper;
 using Microsoft.AspNetCore.Mvc;
-using System.Data;
+using Para.Data.DapperRepository;
 
 namespace Para.Api.Controllers
 {
@@ -8,39 +7,22 @@ namespace Para.Api.Controllers
     [ApiController]
     public class CustomerReportController : ControllerBase
     {
-        private readonly IDbConnection _dbConnection;
+        private readonly CustomerRepository _customerRepository;
 
-        public CustomerReportController(IDbConnection dbConnection)
+        public CustomerReportController(CustomerRepository customerRepository)
         {
-            _dbConnection = dbConnection;
+            _customerRepository = customerRepository;
         }
 
-        [HttpGet("customer-report")]
-        public async Task<IActionResult> GetCustomerReport()
+        [HttpGet("{customerId}")]
+        public async Task<IActionResult> GetCustomerWithDetails(long customerId)
         {
-            string query = @"
-                SELECT 
-                    c.Id, c.Name, c.Email,
-                    cd.DetailId, cd.DetailInfo,
-                    ca.AddressId, ca.AddressLine
-                FROM Customers c
-                LEFT JOIN CustomerDetails cd ON c.Id = cd.CustomerId
-                LEFT JOIN CustomerAddresses ca ON c.Id = ca.CustomerId
-                WHERE c.IsActive = 1";
-
-            var result = await _dbConnection.QueryAsync<CustomerReportDto>(query);
-            return Ok(result);
+            var customer = await _customerRepository.GetCustomerWithDetailsAsync(customerId);
+            if (customer == null)
+            {
+                return NotFound();
+            }
+            return Ok(customer);
         }
-    }
-
-    public class CustomerReportDto
-    {
-        public long Id { get; set; }
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public long DetailId { get; set; }
-        public string DetailInfo { get; set; }
-        public long AddressId { get; set; }
-        public string AddressLine { get; set; }
     }
 }

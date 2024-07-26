@@ -78,10 +78,10 @@ public class Startup
         }
 
         app.UseMiddleware<ErrorHandlerMiddleware>();
-         app.UseMiddleware<ReqResLoggingMiddleware>();
+        app.UseMiddleware<ReqResLoggingMiddleware>();
         app.UseMiddleware<HeartbeatMiddleware>();
 
-       
+
 
         app.UseHttpsRedirection();
         app.UseRouting();
