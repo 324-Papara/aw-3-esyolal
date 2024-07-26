@@ -10,13 +10,12 @@ public class ReqResLoggingMiddleware
     }
 
     public async Task InvokeAsync(HttpContext context)
-    {   
-             if (context.Request.Path.StartsWithSegments("/api/CustomerReport"))
+    {
+        if (context.Request.Path.StartsWithSegments("/api/CustomerReport"))
         {
             await _next(context);
             return;
         }
-
 
         // Request Logging
         context.Request.EnableBuffering();
@@ -27,13 +26,19 @@ public class ReqResLoggingMiddleware
         _logger.LogInformation($"Request: Method: {context.Request.Method}, Path: {context.Request.Path}, QueryString: {context.Request.QueryString}, Body: {requestBodyText}");
 
         context.Request.Body.Position = 0;
-
-        // Response Logging
         var originalBodyStream = context.Response.Body;
         using var responseBodyStream = new MemoryStream();
         context.Response.Body = responseBodyStream;
 
-        await _next(context);
+        try
+        {
+            await _next(context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while processing the request.");
+            throw;
+        }
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var responseBodyText = await new StreamReader(context.Response.Body).ReadToEndAsync();

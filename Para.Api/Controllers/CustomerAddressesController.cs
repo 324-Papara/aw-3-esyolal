@@ -32,10 +32,10 @@ namespace Para.Api.Controllers
             return result;
         }
 
-        [HttpPost]
-        public async Task<ApiResponse<CustomerAddressResponse>> Post([FromBody] CustomerAddressRequest request)
+        [HttpPost("{customerId}")]
+        public async Task<ApiResponse<CustomerAddressResponse>> Post(long customerId, [FromBody] CustomerAddressRequest request)
         {
-            var command = new CreateCustomerAddressCommand(request);
+            var command = new CreateCustomerAddressCommand(customerId,request);
             var result = await mediator.Send(command);
             return result;
         }

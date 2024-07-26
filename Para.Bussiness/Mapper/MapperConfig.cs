@@ -11,14 +11,17 @@ public class MapperConfig : Profile
     {
         CreateMap<Customer, CustomerResponse>();
         CreateMap<CustomerRequest, Customer>();
-        
+
         CreateMap<CustomerAddress, CustomerAddressResponse>();
         CreateMap<CustomerAddressRequest, CustomerAddress>();
-        
+
         CreateMap<CustomerPhone, CustomerPhoneResponse>();
         CreateMap<CustomerPhoneRequest, CustomerPhone>();
-        
+
         CreateMap<CustomerDetail, CustomerDetailResponse>();
         CreateMap<CustomerDetailRequest, CustomerDetail>();
+
+        CreateMap<CustomerRequest, Customer>()
+            .ForMember(x => x.CustomerNumber, opt => opt.Ignore());
     }
 }

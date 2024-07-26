@@ -7,8 +7,6 @@ using Para.Data.Domain;
 using Para.Data.UnitOfWork;
 using Para.Schema;
 
-namespace Para.Bussiness.Command;
-
 public class CustomerCommandHandler :
     IRequestHandler<CreateCustomerCommand, ApiResponse<CustomerResponse>>,
     IRequestHandler<UpdateCustomerCommand, ApiResponse>,
@@ -28,44 +26,87 @@ public class CustomerCommandHandler :
 
     public async Task<ApiResponse<CustomerResponse>> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
     {
-        var mapped = mapper.Map<CustomerRequest, Customer>(request.Request);
-        mapped.CustomerNumber = new Random().Next(1000000, 9999999);
-        await unitOfWork.CustomerRepository.Insert(mapped);
-        await unitOfWork.Complete();
+        try
+        {
+            var mapped = mapper.Map<CustomerRequest, Customer>(request.Request);
+            mapped.CustomerNumber = new Random().Next(1000000, 9999999);
+            await unitOfWork.CustomerRepository.Insert(mapped);
+            await unitOfWork.Complete();
 
-        var response = mapper.Map<CustomerResponse>(mapped);
-        return new ApiResponse<CustomerResponse>(response);
+            var response = mapper.Map<CustomerResponse>(mapped);
+            return new ApiResponse<CustomerResponse>(response);
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<CustomerResponse>(false)
+            {
+                Message = ex.Message
+            };
+        }
     }
 
     public async Task<ApiResponse> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
     {
-        var mapped = mapper.Map<CustomerRequest, Customer>(request.Request);
-        mapped.Id = request.CustomerId;
-        unitOfWork.CustomerRepository.Update(mapped);
+        
+        var existingCustomer = await unitOfWork.CustomerRepository.GetById(request.CustomerId);
+        if (existingCustomer == null)
+        {
+            return new ApiResponse { Message = "Customer not found." };
+        }
+        mapper.Map(request.Request, existingCustomer);
+
+        existingCustomer.InsertUser = existingCustomer.InsertUser ?? "Server";
+        existingCustomer.InsertDate = existingCustomer.InsertDate == default ? DateTime.UtcNow : existingCustomer.InsertDate;
+        existingCustomer.IsActive = existingCustomer.IsActive;
+
+        unitOfWork.CustomerRepository.Update(existingCustomer);
         await unitOfWork.Complete();
+
         return new ApiResponse();
     }
 
+
+
     public async Task<ApiResponse> Handle(DeleteCustomerCommand request, CancellationToken cancellationToken)
     {
-        await unitOfWork.CustomerRepository.Delete(request.CustomerId);
-        await unitOfWork.Complete();
-        return new ApiResponse();
+        try
+        {
+            await unitOfWork.CustomerRepository.Delete(request.CustomerId);
+            await unitOfWork.Complete();
+            return new ApiResponse();
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse()
+            {
+                Message = ex.Message
+            };
+        }
     }
 
     public async Task<ApiResponse> Handle(ValidateCustomerCommand request, CancellationToken cancellationToken)
     {
-        var validationResult = await validator.ValidateAsync(request.CustomerRequest, cancellationToken);
-
-        if (!validationResult.IsValid)
+        try
         {
-            var errorResponse = new ApiResponse()
-            {
-                Message = validationResult.Errors.FirstOrDefault()?.ErrorMessage
-            };
-            return errorResponse;
-        }
+            var validationResult = await validator.ValidateAsync(request.CustomerRequest, cancellationToken);
 
-        return new ApiResponse();
+            if (!validationResult.IsValid)
+            {
+                var errorResponse = new ApiResponse()
+                {
+                    Message = validationResult.Errors.FirstOrDefault()?.ErrorMessage
+                };
+                return errorResponse;
+            }
+
+            return new ApiResponse();
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse("false")
+            {
+                Message = ex.Message
+            };
+        }
     }
 }

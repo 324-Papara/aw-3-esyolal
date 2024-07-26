@@ -33,10 +33,21 @@ public class CustomerPhoneCommandHandler :
 
     public async Task<ApiResponse> Handle(UpdateCustomerPhoneCommand request, CancellationToken cancellationToken)
     {
-        var phone = mapper.Map<CustomerPhone>(request.Request);
-        phone.CustomerId = request.CustomerId;
-        unitOfWork.CustomerPhoneRepository.Update(phone);
+
+        var existingCustomerPhone = await unitOfWork.CustomerRepository.GetById(request.CustomerId);
+        if (existingCustomerPhone == null)
+        {
+            return new ApiResponse { Message = "Customer not found." };
+        }
+        mapper.Map(request.Request, existingCustomerPhone);
+
+        existingCustomerPhone.InsertUser = existingCustomerPhone.InsertUser ?? "Server";
+        existingCustomerPhone.InsertDate = existingCustomerPhone.InsertDate == default ? DateTime.UtcNow : existingCustomerPhone.InsertDate;
+        existingCustomerPhone.IsActive = existingCustomerPhone.IsActive;
+
+        unitOfWork.CustomerRepository.Update(existingCustomerPhone);
         await unitOfWork.Complete();
+
         return new ApiResponse();
     }
 

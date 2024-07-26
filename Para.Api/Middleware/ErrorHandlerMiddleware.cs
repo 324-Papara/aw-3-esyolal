@@ -1,43 +1,37 @@
-using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.Threading.Tasks;
 
-namespace Para.Api.Middleware;
-
-
-public class ErrorHandlerMiddleware
+namespace Para.Api.Middleware
 {
-    private readonly RequestDelegate next;
-
-    public ErrorHandlerMiddleware(RequestDelegate next)
+    public class ErrorHandlerMiddleware
     {
-        this.next = next;
-    }
+        private readonly RequestDelegate _next;
 
-    public async Task Invoke(HttpContext context)
-    {
-        try
+        public ErrorHandlerMiddleware(RequestDelegate next)
         {
-            // before controller invoke
-            await next.Invoke(context);
-            // after controller invoke
+            _next = next;
         }
-        catch (Exception ex)
+
+        public async Task Invoke(HttpContext context)
         {
-            // log
-
-
-            var errorResponse = new
+            try
             {
-                Message = "Internal Server Error",
-                Detail = ex.Message
-            };
-
-            var errorJson = JsonSerializer.Serialize(errorResponse);
-
-            context.Response.StatusCode = 500;
-            context.Request.ContentType = "application/json";
-            await context.Response.WriteAsync(errorJson);
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                await HandleExceptionAsync(context, ex);
+            }
         }
 
+        private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+        {
+            var code = StatusCodes.Status500InternalServerError;
+            var result = System.Text.Json.JsonSerializer.Serialize(new { error = exception.Message });
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = code;
+            return context.Response.WriteAsync(result);
+        }
     }
-
 }

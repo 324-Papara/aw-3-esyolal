@@ -19,7 +19,7 @@ public class CustomerAddressQueryHandler :
 
     public async Task<ApiResponse<CustomerAddressResponse>> Handle(GetCustomerAddressByIdQuery request, CancellationToken cancellationToken)
     {
-        var entity = await unitOfWork.CustomerAddressRepository.GetById(request.AddressId);
+        var entity = await unitOfWork.CustomerAddressRepository.GetById(request.CustomerId);
         var mapped = mapper.Map<CustomerAddressResponse>(entity);
         return new ApiResponse<CustomerAddressResponse>(mapped);
     }
