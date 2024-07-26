@@ -24,11 +24,20 @@ public class ErrorHandlerMiddleware
         {
             // log
 
+
+            var errorResponse = new
+            {
+                Message = "Internal Server Error",
+                Detail = ex.Message
+            };
+
+            var errorJson = JsonSerializer.Serialize(errorResponse);
+
             context.Response.StatusCode = 500;
             context.Request.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize("Internal Server Error"));
+            await context.Response.WriteAsync(errorJson);
         }
-       
+
     }
-    
+
 }

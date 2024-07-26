@@ -13,6 +13,8 @@ using Para.Bussiness.Cqrs;
 using Para.Data.Context;
 using Para.Data.UnitOfWork;
 using Para.Schema.Validators;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 
 namespace Para.Api;
 
@@ -42,7 +44,6 @@ public class Startup
         services.AddDbContext<ParaDbContext>(options =>
            options.UseSqlServer(Configuration.GetConnectionString("MsSqlConnection")));
         //services.AddDbContext<ParaDbContext>(options => options.UseNpgsql(connectionStringPostgre));
-
         //FluentValidation
         services.AddValidatorsFromAssemblyContaining<CustomerValidator>();
         services.AddControllers().AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<CustomerValidator>());
@@ -63,6 +64,10 @@ public class Startup
         services.AddScoped<CustomService2>();
         services.AddSingleton<CustomService3>();
     }
+    public void ConfigureContainer(ContainerBuilder builder)
+    {
+        builder.RegisterModule(new AutofacModule());
+    }
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
         if (env.IsDevelopment())
@@ -72,10 +77,11 @@ public class Startup
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Para.Api v1"));
         }
 
-
-        app.UseMiddleware<HeartbeatMiddleware>();
         app.UseMiddleware<ErrorHandlerMiddleware>();
-        app.UseMiddleware<ReqResLoggingMiddleware>();
+         app.UseMiddleware<ReqResLoggingMiddleware>();
+        app.UseMiddleware<HeartbeatMiddleware>();
+
+       
 
         app.UseHttpsRedirection();
         app.UseRouting();

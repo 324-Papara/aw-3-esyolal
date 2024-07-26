@@ -1,4 +1,5 @@
-namespace Para.Api;
+using Autofac.Extensions.DependencyInjection;
+using Para.Api;
 
 public class Program
 {
@@ -9,6 +10,7 @@ public class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
+            .UseServiceProviderFactory(new AutofacServiceProviderFactory())
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseStartup<Startup>();

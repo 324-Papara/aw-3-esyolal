@@ -1,9 +1,3 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
-
 public class ReqResLoggingMiddleware
 {
     private readonly RequestDelegate _next;
@@ -16,41 +10,36 @@ public class ReqResLoggingMiddleware
     }
 
     public async Task InvokeAsync(HttpContext context)
-    {
-       
-        var request = await FormatRequest(context.Request);
-        _logger.LogInformation($"Request: {request}");
-
-        
-        var originalBodyStream = context.Response.Body;
-
-        using (var responseBody = new MemoryStream())
+    {   
+             if (context.Request.Path.StartsWithSegments("/api/CustomerReport"))
         {
-            context.Response.Body = responseBody;
             await _next(context);
-            var response = await FormatResponse(context.Response);
-            _logger.LogInformation($"Response: {response}");
-            responseBody.Seek(0, SeekOrigin.Begin);
-            await responseBody.CopyToAsync(originalBodyStream);
+            return;
         }
-    }
 
-    private async Task<string> FormatRequest(HttpRequest request)
-    {
-        request.EnableBuffering();
-        using (var reader = new StreamReader(request.Body, leaveOpen: true))
-        {
-            var body = await reader.ReadToEndAsync();
-            request.Body.Position = 0; 
-            return $"Method: {request.Method}, Path: {request.Path}, QueryString: {request.QueryString}, Body: {body}";
-        }
-    }
 
-    private async Task<string> FormatResponse(HttpResponse response)
-    {
-        response.Body.Seek(0, SeekOrigin.Begin);
-        var body = await new StreamReader(response.Body).ReadToEndAsync();
-        response.Body.Seek(0, SeekOrigin.Begin); 
-        return $"StatusCode: {response.StatusCode}, Body: {body}";
+        // Request Logging
+        context.Request.EnableBuffering();
+        var requestBodyStream = new MemoryStream();
+        await context.Request.Body.CopyToAsync(requestBodyStream);
+        requestBodyStream.Position = 0;
+        var requestBodyText = new StreamReader(requestBodyStream).ReadToEnd();
+        _logger.LogInformation($"Request: Method: {context.Request.Method}, Path: {context.Request.Path}, QueryString: {context.Request.QueryString}, Body: {requestBodyText}");
+
+        context.Request.Body.Position = 0;
+
+        // Response Logging
+        var originalBodyStream = context.Response.Body;
+        using var responseBodyStream = new MemoryStream();
+        context.Response.Body = responseBodyStream;
+
+        await _next(context);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var responseBodyText = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        _logger.LogInformation($"Response: StatusCode: {context.Response.StatusCode}, Body: {responseBodyText}");
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        await responseBodyStream.CopyToAsync(originalBodyStream);
     }
 }
